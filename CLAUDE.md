@@ -6,43 +6,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Basmanager is a local-only SwiftUI iPhone app that reads "Smart15V" Bluetooth rechargeable batteries (AA/AAA).
 
-- `ios/`: the app. The XcodeGen spec is `ios/project.yml`. The generated `SmartBattery.xcodeproj` is disposable.
+- `SmartBattery/`: the Xcode project (`SmartBattery.xcodeproj`, created with Xcode). Targets: `SmartBattery` (app), `SmartBatteryLiveActivityExtension` (Live Activity widget), `SmartBatteryTests`, and an empty `SmartBatteryUITests`. Folders are synchronized with targets, so a file added to a folder joins that folder's target.
+- `docs/`: spec, ADR and plan for the settings slice (`docs/specs/settings.md`, `docs/adr/0001-settings-scope.md`, `docs/plans/settings.md`).
 - `_context/handoff/`: the session handoff document.
 
 ## Commands
 
-Run these from `ios/`. Regenerate the project after you add or remove files, or after you edit `project.yml`:
+Create and change the project only with Xcode (Xcode MCP project, target, file and build-setting tools, or the Xcode app). Do not use XcodeGen or edit the project file by hand.
+
+Build and test with Xcode MCP (`BuildProject`, `RunAllTests`, `RunSomeTests`). A test needs an unlocked device or a simulator claimed with sim-pilot as the run destination. The fallback is `eyebuild`, which keeps artifacts under `/Volumes/eyedisk/build/basman/`:
 
 ```sh
-xcodegen generate
-```
-
-Build and test with Xcode MCP when it is available. The fallback is `eyebuild`, which keeps artifacts under `/Volumes/eyedisk/build/basman/`:
-
-```sh
+cd SmartBattery
 TMPDIR=/Volumes/eyedisk/tmp eyebuild xcodebuild sim-build -- -project SmartBattery.xcodeproj -scheme SmartBattery \
-  -destination 'generic/platform=iOS Simulator' build-for-testing
-# Tests need a booted simulator. Claim one with sim-pilot first.
-TMPDIR=/Volumes/eyedisk/tmp eyebuild xcodebuild sim-build -- -project SmartBattery.xcodeproj -scheme SmartBattery \
-  -destination "id=<UDID>" test-without-building [-only-testing:SmartBatteryTests/BatteryProtocolTests/decodesAdvertisement]
+  -destination "id=<UDID>" test [-only-testing:SmartBatteryTests/StorageSafetyTests]
 eyebuild rm sim-build
 ```
 
-Tests use Swift Testing (`@Test`) and live in `SmartBatteryTests/BatteryProtocolTests.swift`.
+Tests use Swift Testing. A test for a spec criterion carries the ID in its display name, for example `@Test("AC-3.1 …")`.
 
-Use RemoteDebug to put a Debug build on the user's iPhone. Increase `CURRENT_PROJECT_VERSION` in `project.yml` first, then publish:
+Use RemoteDebug to put a Debug build on the user's iPhone. Increase `CURRENT_PROJECT_VERSION` on both the app and the extension target (Xcode build settings) first, then publish:
 
 ```sh
-'/Users/oozoofrog/Library/Application Support/RemoteDebug/agent/rd' build /Volumes/eyedisk/develop/apps/basman/ios SmartBattery
+'/Users/oozoofrog/Library/Application Support/RemoteDebug/agent/rd' build /Volumes/eyedisk/develop/apps/basman/SmartBattery SmartBattery
 ```
 
-The RemoteDebug build writes `ios/Build/`. The `.gitignore` excludes it.
+Xcode writes build output to `SmartBattery/Build/`. The `.gitignore` excludes it.
 
 ## Architecture
 
-The app creates two objects and injects both with `.environment` (`App/SmartBatteryApp.swift`):
+The app creates its objects in `SmartBattery/SmartBattery/App/SmartBatteryApp.swift` and injects them with `.environment`, together with the low-battery threshold (`LowBatteryThreshold`, stored in `UserDefaults`):
 
-- **`BatteryStore`** (`@MainActor @Observable`) is the single source of truth.
+- **`BatteryStore`** (`@MainActor @Observable`) is the single source of truth. The app uses `BatteryStore.onDevice()`; `BatteryStore(fileURL: nil)` is an in-memory store for tests and previews. When a data file exists but cannot be read, the store sets `batteryLoadFailed` or `chargingLoadFailed`, refuses changes and never writes that file (ADR-0001).
   - `registered`: the user's batteries. It persists as JSON in Application Support.
   - `sightings`: the live advertisements, keyed by peripheral UUID.
   - `connections`, `chargeStarts`, and `now`: runtime state.
@@ -61,4 +56,5 @@ The peripheral UUID is the battery's identity. It is stable only on one iPhone, 
 - The app sends nothing off the device. It has no account or server.
 - The size bit in the advertisement is not reliable for every unit. Users override AA/AAA per battery with `sizeOverride`.
 - The display name is Basmanager. The bundle ID stays `com.oozoofrog.SmartBattery` so that existing installs keep their data.
-- Swift 6 language mode with strict concurrency. The minimum iOS version is 17. The signing team is `HY47J4787Q` with automatic signing.
+- Swift 6 language mode, default actor isolation `nonisolated`, approachable concurrency off. The minimum iOS version is 17. The signing team is `HY47J4787Q` with automatic signing.
+- `ChargingActivityAttributes` exists twice, in `SmartBattery/Model/` and `SmartBatteryLiveActivity/`, because each target compiles its own copy. Keep both copies identical.
