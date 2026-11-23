@@ -1,0 +1,2 @@
+/* Korean is the extension's only language. This file gives the bundle a Korean localization, so system text in the Live Activity is Korean. */
+"CFBundleDisplayName" = "Basmanager";

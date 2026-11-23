@@ -1,0 +1,3 @@
+/* Korean is the app's only language. This file gives the bundle a Korean localization, so iOS runs the app and system text in Korean. */
+"CFBundleDisplayName" = "Basmanager";
+"NSBluetoothAlwaysUsageDescription" = "주변 스마트 건전지의 잔량과 충전 횟수를 블루투스로 읽습니다.";

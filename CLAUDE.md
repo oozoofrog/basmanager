@@ -57,4 +57,5 @@ The peripheral UUID is the battery's identity. It is stable only on one iPhone, 
 - The size bit in the advertisement is not reliable for every unit. Users override AA/AAA per battery with `sizeOverride`.
 - The display name is Basmanager. The bundle ID stays `com.oozoofrog.SmartBattery` so that existing installs keep their data.
 - Swift 6 language mode, default actor isolation `nonisolated`, approachable concurrency off. The minimum iOS version is 17. The signing team is `HY47J4787Q` with automatic signing.
+- The project's development region is `en`, but the UI is Korean only. `ko.lproj/InfoPlist.strings` in the app and the extension gives each bundle a Korean localization, so iOS shows system text ("편집", relative dates) in Korean. Do not remove these files.
 - `ChargingActivityAttributes` exists twice, in `SmartBattery/Model/` and `SmartBatteryLiveActivity/`, because each target compiles its own copy. Keep both copies identical.
